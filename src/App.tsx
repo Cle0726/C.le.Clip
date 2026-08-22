@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Check,
   Clipboard,
@@ -128,6 +128,7 @@ export default function App() {
     model: DEFAULT_AI_SETTINGS.model,
     apiKey: "",
   });
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let disposed = false;
@@ -188,6 +189,14 @@ export default function App() {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      const searchShortcut = !settingsOpen && event.key.toLowerCase() === "k" && (event.metaKey || event.ctrlKey);
+      if (searchShortcut) {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+        return;
+      }
+
       if (event.key !== "Escape") return;
       if (settingsOpen) {
         setSettingsOpen(false);
@@ -209,7 +218,7 @@ export default function App() {
   }, [items, query, view]);
 
   const favoriteCount = useMemo(() => items.filter((item) => item.favorite).length, [items]);
-  const selected = items.find((item) => item.id === selectedId) ?? visibleItems[0] ?? null;
+  const selected = visibleItems.find((item) => item.id === selectedId) ?? visibleItems[0] ?? null;
   const selectedText = selected?.kind === "text" ? selected.text ?? "" : "";
   const quickActions = useMemo(() => buildQuickActions(selectedText), [selectedText]);
 
@@ -390,7 +399,7 @@ export default function App() {
           <header className="topbar">
             <div className="search-box">
               <Search size={18} />
-              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索剪贴板内容" />
+              <input ref={searchInputRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索剪贴板内容" />
               {query && <button onClick={() => setQuery("")}><X size={15} /></button>}
             </div>
             {items.some((item) => !item.favorite) && (
