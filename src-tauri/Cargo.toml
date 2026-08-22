@@ -1,0 +1,17 @@
+[package]
+name = "c-le-clip"
+version = "0.1.0"
+description = "C.le. Clip - clipboard history and prompt optimizer"
+authors = ["C.le."]
+edition = "2021"
+
+[lib]
+name = "c_le_clip_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+arboard = "3"
