@@ -1,0 +1,133 @@
+name: Package Preview
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/package-preview.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Windows x64
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout MVP branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/desktop-mvp-v0.1.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Windows package
+        run: npm run tauri:build
+
+      - name: Upload Windows installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: C.le.Clip-Windows-x64
+          path: |
+            src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/msi/*.msi
+          if-no-files-found: error
+          retention-days: 14
+
+  macos-arm64:
+    name: macOS Apple Silicon
+    runs-on: macos-14
+    timeout-minutes: 90
+    steps:
+      - name: Checkout MVP branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/desktop-mvp-v0.1.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build macOS Apple Silicon package
+        run: npm run tauri:build -- --target aarch64-apple-darwin
+
+      - name: Upload macOS Apple Silicon package
+        uses: actions/upload-artifact@v4
+        with:
+          name: C.le.Clip-macOS-Apple-Silicon
+          path: |
+            src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+            src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app
+          if-no-files-found: error
+          retention-days: 14
+
+  macos-intel:
+    name: macOS Intel
+    runs-on: macos-14
+    timeout-minutes: 90
+    steps:
+      - name: Checkout MVP branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/desktop-mvp-v0.1.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build macOS Intel package
+        run: npm run tauri:build -- --target x86_64-apple-darwin
+
+      - name: Upload macOS Intel package
+        uses: actions/upload-artifact@v4
+        with:
+          name: C.le.Clip-macOS-Intel
+          path: |
+            src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
+            src-tauri/target/x86_64-apple-darwin/release/bundle/macos/*.app
+          if-no-files-found: error
+          retention-days: 14
