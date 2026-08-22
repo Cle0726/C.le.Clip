@@ -30,7 +30,7 @@ pub(crate) fn setup_desktop(app: &mut App) -> Result<(), Box<dyn std::error::Err
         tauri_plugin_global_shortcut::Builder::new()
             .with_shortcuts([shortcut])?
             .with_handler(|app, _shortcut, event| {
-                if event.state == ShortcutState::Pressed {
+                if event.state() == ShortcutState::Pressed {
                     show_main_window(app);
                 }
             })
@@ -44,7 +44,7 @@ pub(crate) fn setup_desktop(app: &mut App) -> Result<(), Box<dyn std::error::Err
     let tray_builder = TrayIconBuilder::new()
         .tooltip("C.le. Clip")
         .menu(&menu)
-        .menu_on_left_click(false)
+        .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id.as_ref() {
             "open" => show_main_window(app),
             "quit" => app.exit(0),
