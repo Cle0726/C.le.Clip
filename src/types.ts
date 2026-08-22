@@ -1,9 +1,10 @@
-export type ClipboardKind = "text";
+export type ClipboardKind = "text" | "image";
 
 export interface ClipboardItem {
   id: string;
   kind: ClipboardKind;
-  text: string;
+  text: string | null;
+  imageDataUrl: string | null;
   createdAt: number;
   favorite: boolean;
 }
@@ -16,3 +17,10 @@ export type PromptMode =
   | "writing"
   | "image"
   | "analysis";
+
+export interface AiSettings {
+  provider: string;
+  endpoint: string;
+  model: string;
+  hasApiKey: boolean;
+}
