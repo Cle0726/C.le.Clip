@@ -1,6 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import type { ClipboardItem } from "../types";
 
+const CLIPBOARD_UPDATED_EVENT = "clipboard://updated";
 let lastBrowserText = "";
 
 export function isTauriRuntime() {
@@ -32,6 +34,13 @@ export async function captureClipboard(): Promise<ClipboardItem | null> {
   } catch {
     return null;
   }
+}
+
+export async function subscribeClipboardUpdates(
+  handler: (item: ClipboardItem) => void,
+): Promise<() => void> {
+  if (!isTauriRuntime()) return () => undefined;
+  return listen<ClipboardItem>(CLIPBOARD_UPDATED_EVENT, (event) => handler(event.payload));
 }
 
 export async function writeClipboardText(text: string): Promise<void> {
