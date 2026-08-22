@@ -106,18 +106,12 @@ fn mode_instruction(mode: &str) -> &'static str {
     }
 }
 
-#[tauri::command]
-pub(crate) async fn optimize_prompt_ai(
-    state: State<'_, AppState>,
-    input: String,
-    mode: String,
+async fn request_completion(
+    settings: &AiSettings,
+    api_key: Option<String>,
+    system_prompt: &str,
+    user_prompt: String,
 ) -> Result<String, String> {
-    if input.trim().is_empty() {
-        return Err("没有可优化的内容".to_string());
-    }
-
-    let settings = load_settings(&state.db_path)?;
-    let api_key = read_api_key()?;
     let client = Client::builder()
         .timeout(Duration::from_secs(45))
         .build()
@@ -126,14 +120,8 @@ pub(crate) async fn optimize_prompt_ai(
     let payload = json!({
         "model": settings.model,
         "messages": [
-            {
-                "role": "system",
-                "content": "You are C.le. Clip's prompt optimizer. Rewrite the user's original prompt into a stronger prompt. Preserve intent and language. Return only the optimized prompt, with no commentary or analysis."
-            },
-            {
-                "role": "user",
-                "content": format!("Optimization instruction: {}\n\nOriginal prompt:\n{}", mode_instruction(&mode), input.trim())
-            }
+            { "role": "system", "content": system_prompt },
+            { "role": "user", "content": user_prompt }
         ],
         "temperature": 0.2
     });
@@ -161,4 +149,57 @@ pub(crate) async fn optimize_prompt_ai(
         .filter(|value| !value.is_empty())
         .map(ToOwned::to_owned)
         .ok_or_else(|| "AI 返回内容为空".to_string())
+}
+
+#[tauri::command]
+pub(crate) async fn optimize_prompt_ai(
+    state: State<'_, AppState>,
+    input: String,
+    mode: String,
+) -> Result<String, String> {
+    if input.trim().is_empty() {
+        return Err("没有可优化的内容".to_string());
+    }
+
+    let settings = load_settings(&state.db_path)?;
+    let api_key = read_api_key()?;
+    request_completion(
+        &settings,
+        api_key,
+        "You are C.le. Clip's prompt optimizer. Rewrite the user's original prompt into a stronger prompt. Preserve intent and language. Return only the optimized prompt, with no commentary or analysis.",
+        format!(
+            "Optimization instruction: {}\n\nOriginal prompt:\n{}",
+            mode_instruction(&mode),
+            input.trim()
+        ),
+    )
+    .await
+}
+
+#[tauri::command]
+pub(crate) async fn run_ai_action(
+    state: State<'_, AppState>,
+    input: String,
+    action: String,
+) -> Result<String, String> {
+    if input.trim().is_empty() {
+        return Err("没有可处理的内容".to_string());
+    }
+
+    let system_prompt = match action.as_str() {
+        "translate" => "You are C.le. Clip's translation action. If the input is primarily Chinese, translate it into natural English; otherwise translate it into natural Simplified Chinese. Preserve code blocks, URLs, names, numbers, and formatting when possible. Return only the translation.",
+        "summarize" => "You are C.le. Clip's summarization action. Summarize the input clearly and compactly in the same language as the input. Preserve important facts, constraints, names, numbers, and action items. Return only the summary.",
+        "explain-code" => "You are C.le. Clip's code explanation action. Explain what the code does, its important control flow, likely edge cases, and any obvious risks. Use the same language as the surrounding input when possible. Be concise and return only the explanation.",
+        _ => return Err("不支持的 AI Action".to_string()),
+    };
+
+    let settings = load_settings(&state.db_path)?;
+    let api_key = read_api_key()?;
+    request_completion(
+        &settings,
+        api_key,
+        system_prompt,
+        input.trim().to_string(),
+    )
+    .await
 }
