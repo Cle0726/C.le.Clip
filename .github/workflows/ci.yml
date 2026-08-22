@@ -6,6 +6,7 @@ on:
       - main
       - 'feature/**'
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
 
 jobs:
   check:
@@ -29,7 +30,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache Rust
-        uses: swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@v2
         with:
           workspaces: './src-tauri -> target'
 
