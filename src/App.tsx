@@ -19,14 +19,17 @@ import {
   clearClipboardHistory,
   copyClipboardItem,
   deleteClipboardItem,
+  isTauriRuntime,
   listClipboardItems,
   setClipboardFavorite,
+  subscribeClipboardUpdates,
   writeClipboardText,
 } from "./lib/clipboard";
 import {
   DEFAULT_AI_SETTINGS,
   getAiSettings,
   optimizePromptWithAi,
+  runAiAction,
   saveAiSettings,
 } from "./lib/ai";
 import {
@@ -35,7 +38,7 @@ import {
   setAutostartEnabled,
 } from "./lib/system";
 import { optimizePrompt } from "./lib/promptOptimizer";
-import type { AiSettings, ClipboardItem, PromptMode } from "./types";
+import type { AiActionKind, AiSettings, ClipboardItem, PromptMode } from "./types";
 
 const HISTORY_LIMIT = 200;
 
@@ -48,6 +51,51 @@ const promptModes: Array<{ id: PromptMode; label: string }> = [
   { id: "image", label: "图像" },
   { id: "analysis", label: "分析" },
 ];
+
+type QuickAction = {
+  id: string;
+  label: string;
+  promptMode?: PromptMode;
+  aiAction?: AiActionKind;
+};
+
+function looksLikeCode(value: string) {
+  const text = value.trim();
+  if (!text) return false;
+  const codeSignals = [
+    /\b(function|const|let|var|class|interface|import|export|return)\b/,
+    /\b(def|from|async|await|lambda)\b/,
+    /=>|::|\{[\s\S]*\}|<\/?[a-z][^>]*>/i,
+    /\b(SELECT|INSERT|UPDATE|DELETE|CREATE TABLE)\b/i,
+  ];
+  return codeSignals.some((pattern) => pattern.test(text));
+}
+
+function buildQuickActions(text: string): QuickAction[] {
+  if (!text.trim()) return [];
+
+  if (looksLikeCode(text)) {
+    return [
+      { id: "optimize", label: "优化 Prompt", promptMode: "smart" },
+      { id: "coding", label: "编程模式", promptMode: "coding" },
+      { id: "explain-code", label: "解释代码", aiAction: "explain-code" },
+      { id: "translate", label: "翻译", aiAction: "translate" },
+    ];
+  }
+
+  const actions: QuickAction[] = [
+    { id: "optimize", label: "优化 Prompt", promptMode: "smart" },
+    { id: "detailed", label: "补充细节", promptMode: "detailed" },
+  ];
+
+  if (text.length >= 180) {
+    actions.push({ id: "summarize", label: "总结内容", aiAction: "summarize" });
+  } else {
+    actions.push({ id: "writing", label: "润色写作提示", promptMode: "writing" });
+  }
+  actions.push({ id: "translate", label: "翻译", aiAction: "translate" });
+  return actions;
+}
 
 function relativeTime(timestamp: number) {
   const seconds = Math.max(1, Math.floor((Date.now() - timestamp) / 1000));
@@ -100,16 +148,36 @@ export default function App() {
 
   useEffect(() => {
     let disposed = false;
+    let stopListening: (() => void) | undefined;
+
+    const ingest = (item: ClipboardItem) => {
+      if (disposed) return;
+      setItems((current) => [item, ...current.filter((entry) => entry.id !== item.id)].slice(0, HISTORY_LIMIT));
+      setSelectedId((current) => current ?? item.id);
+    };
+
     const capture = async () => {
       try {
         const item = await captureClipboard();
-        if (disposed || !item) return;
-        setItems((current) => [item, ...current.filter((entry) => entry.id !== item.id)].slice(0, HISTORY_LIMIT));
-        setSelectedId((current) => current ?? item.id);
+        if (item) ingest(item);
       } catch {
         // Clipboard can be temporarily locked by another application on Windows.
       }
     };
+
+    if (isTauriRuntime()) {
+      void subscribeClipboardUpdates(ingest).then((stop) => {
+        if (disposed) stop();
+        else stopListening = stop;
+      });
+      void capture();
+
+      return () => {
+        disposed = true;
+        stopListening?.();
+      };
+    }
+
     void capture();
     const timer = window.setInterval(capture, 800);
     return () => {
@@ -142,6 +210,7 @@ export default function App() {
 
   const selected = items.find((item) => item.id === selectedId) ?? visibleItems[0] ?? null;
   const selectedText = selected?.kind === "text" ? selected.text ?? "" : "";
+  const quickActions = useMemo(() => buildQuickActions(selectedText), [selectedText]);
 
   useEffect(() => {
     setOptimizeError("");
@@ -195,22 +264,48 @@ export default function App() {
     setSelectedId((current) => items.some((item) => item.id === current && item.favorite) ? current : null);
   }
 
-  async function runOptimize() {
+  async function runPromptMode(nextMode: PromptMode) {
     if (!selectedText) return;
+    setMode(nextMode);
     setOptimizeError("");
+
     if (engine === "local") {
-      setOptimized(optimizePrompt(selectedText, mode));
+      setOptimized(optimizePrompt(selectedText, nextMode));
       return;
     }
 
     setOptimizing(true);
     try {
-      setOptimized(await optimizePromptWithAi(selectedText, mode));
+      setOptimized(await optimizePromptWithAi(selectedText, nextMode));
     } catch (error) {
       setOptimizeError(error instanceof Error ? error.message : String(error));
     } finally {
       setOptimizing(false);
     }
+  }
+
+  async function runQuickAction(action: QuickAction) {
+    if (action.promptMode) {
+      await runPromptMode(action.promptMode);
+      return;
+    }
+    if (!selectedText || !action.aiAction) return;
+
+    setEngine("ai");
+    setOptimizeError("");
+    setOptimizing(true);
+    try {
+      setOptimized(await runAiAction(selectedText, action.aiAction));
+    } catch (error) {
+      setOptimizeError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setOptimizing(false);
+    }
+  }
+
+  async function runOptimize() {
+    if (!selectedText) return;
+    await runPromptMode(mode);
   }
 
   function openSettings() {
@@ -338,8 +433,8 @@ export default function App() {
         <div className="prompt-heading">
           <div className="prompt-icon"><Sparkles size={18} /></div>
           <div>
-            <h2>Prompt Lab</h2>
-            <p>本地模板 + 可选 AI Provider</p>
+            <h2>C.le. Actions</h2>
+            <p>剪贴板智能动作 + Prompt Lab</p>
           </div>
         </div>
 
@@ -347,19 +442,28 @@ export default function App() {
           <div className="prompt-empty">
             <ImageIcon size={25} />
             <strong>当前选择的是图片</strong>
-            <span>图片历史已经支持；Prompt Lab 目前先处理文字内容。</span>
+            <span>图片历史已经支持；AI 图片动作会在后续版本加入。</span>
           </div>
         ) : selectedText ? (
           <>
             <label className="section-label">原始内容</label>
             <div className="source-preview">{selectedText}</div>
 
-            <div className="engine-switch">
-              <button className={engine === "local" ? "active" : ""} onClick={() => setEngine("local")}>本地优化</button>
-              <button className={engine === "ai" ? "active" : ""} onClick={() => setEngine("ai")}>AI 优化</button>
+            <label className="section-label">智能动作</label>
+            <div className="mode-grid">
+              {quickActions.map((action) => (
+                <button key={action.id} disabled={optimizing} onClick={() => void runQuickAction(action)}>
+                  {action.label}
+                </button>
+              ))}
             </div>
 
-            <label className="section-label">优化模式</label>
+            <div className="engine-switch">
+              <button className={engine === "local" ? "active" : ""} onClick={() => setEngine("local")}>本地优化</button>
+              <button className={engine === "ai" ? "active" : ""} onClick={() => setEngine("ai")}>AI Provider</button>
+            </div>
+
+            <label className="section-label">Prompt 模式</label>
             <div className="mode-grid">
               {promptModes.map((option) => (
                 <button key={option.id} className={mode === option.id ? "active" : ""} onClick={() => setMode(option.id)}>
@@ -369,7 +473,7 @@ export default function App() {
             </div>
 
             <div className="result-header">
-              <label className="section-label">C.le. 优化结果</label>
+              <label className="section-label">C.le. 结果</label>
               <button disabled={optimizing} onClick={() => void runOptimize()}>
                 {engine === "ai" ? "生成" : "重新生成"}
               </button>
@@ -381,20 +485,20 @@ export default function App() {
               </div>
             )}
             <div className="result-box-wrap">
-              {optimizing && <div className="result-loading"><LoaderCircle size={18} className="spin" /> AI 正在优化…</div>}
-              <textarea value={optimized} onChange={(event) => setOptimized(event.target.value)} spellCheck={false} placeholder={engine === "ai" ? "点击“生成”开始 AI 优化" : ""} />
+              {optimizing && <div className="result-loading"><LoaderCircle size={18} className="spin" /> C.le. 正在处理…</div>}
+              <textarea value={optimized} onChange={(event) => setOptimized(event.target.value)} spellCheck={false} placeholder={engine === "ai" ? "选择智能动作，或点击“生成”优化 Prompt" : ""} />
             </div>
             {optimizeError && <p className="inline-error">{optimizeError}</p>}
 
             <button className="primary-action" disabled={!optimized || optimizing} onClick={() => void copyOptimized()}>
               {copiedId === "optimized" ? <Check size={17} /> : <Sparkles size={17} />}
-              {copiedId === "optimized" ? "已复制" : "复制优化结果"}
+              {copiedId === "optimized" ? "已复制" : "复制结果"}
             </button>
           </>
         ) : (
           <div className="prompt-empty">
             <Sparkles size={25} />
-            <span>选择一条文字剪贴板内容开始优化。</span>
+            <span>选择一条文字剪贴板内容开始处理。</span>
           </div>
         )}
       </aside>
