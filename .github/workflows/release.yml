@@ -48,6 +48,11 @@ jobs:
           node-version: 22
 
       - name: Setup Rust
+        if: matrix.target == ''
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Rust target
+        if: matrix.target != ''
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
@@ -107,7 +112,8 @@ jobs:
           find release-assets -maxdepth 2 -type f -print
           test -n "$(find release-assets -type f -name '*.exe' -print -quit)" || { echo 'Missing Windows .exe'; exit 1; }
           test -n "$(find release-assets -type f -name '*.msi' -print -quit)" || { echo 'Missing Windows .msi'; exit 1; }
-          test "$(find release-assets -type f -name '*.dmg' | wc -l)" -ge 2 || { echo 'Missing one or more macOS .dmg files'; exit 1; }
+          DMG_COUNT=$(find release-assets -type f -name '*.dmg' | wc -l | tr -d ' ')
+          test "$DMG_COUNT" -ge 2 || { echo 'Missing one or more macOS .dmg files'; exit 1; }
 
       - name: Write release notes
         shell: bash
