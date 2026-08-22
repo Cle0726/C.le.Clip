@@ -18,6 +18,8 @@ export type PromptMode =
   | "image"
   | "analysis";
 
+export type AiActionKind = "translate" | "summarize" | "explain-code";
+
 export interface AiSettings {
   provider: string;
   endpoint: string;
