@@ -43,10 +43,10 @@ import type { AiActionKind, AiSettings, ClipboardItem, PromptMode } from "./type
 const HISTORY_LIMIT = 200;
 
 const promptModes: Array<{ id: PromptMode; label: string }> = [
-  { id: "smart", label: "智能" },
-  { id: "concise", label: "简洁" },
+  { id: "smart", label: "通用" },
+  { id: "concise", label: "精简" },
   { id: "detailed", label: "详细" },
-  { id: "coding", label: "编程" },
+  { id: "coding", label: "开发者" },
   { id: "writing", label: "写作" },
   { id: "image", label: "图像" },
   { id: "analysis", label: "分析" },
@@ -91,7 +91,7 @@ function buildQuickActions(text: string): QuickAction[] {
   if (text.length >= 180) {
     actions.push({ id: "summarize", label: "总结内容", aiAction: "summarize" });
   } else {
-    actions.push({ id: "writing", label: "润色写作提示", promptMode: "writing" });
+    actions.push({ id: "writing", label: "润色表达", promptMode: "writing" });
   }
   actions.push({ id: "translate", label: "翻译", aiAction: "translate" });
   return actions;
@@ -208,6 +208,7 @@ export default function App() {
     });
   }, [items, query, view]);
 
+  const favoriteCount = useMemo(() => items.filter((item) => item.favorite).length, [items]);
   const selected = items.find((item) => item.id === selectedId) ?? visibleItems[0] ?? null;
   const selectedText = selected?.kind === "text" ? selected.text ?? "" : "";
   const quickActions = useMemo(() => buildQuickActions(selectedText), [selectedText]);
@@ -343,214 +344,279 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <div className="brand" aria-label="C.le. Clip">
-          <span className="brand-mark">C.</span><span>le.</span>
-          <small>Clip</small>
-        </div>
-
-        <nav className="nav-list">
-          <button className={view === "recent" ? "active" : ""} onClick={() => setView("recent")}>
-            <Clipboard size={17} /> 最近
-          </button>
-          <button className={view === "favorites" ? "active" : ""} onClick={() => setView("favorites")}>
-            <Heart size={17} /> 收藏
-          </button>
-        </nav>
-
-        <div className="sidebar-bottom">
-          <div className="shortcut-hint">
-            <span>快速呼出</span>
-            <kbd>⌘/Ctrl ⇧ V</kbd>
+    <div className="desktop-stage">
+      <div className="app-shell">
+        <aside className="sidebar glass-panel">
+          <div className="brand-block" aria-label="C.le. Clip">
+            <div className="brand">
+              <span className="brand-mark">C.</span><span>le.</span>
+              <small>Clip</small>
+            </div>
+            <p>跨平台剪贴板管理器</p>
           </div>
-          <button className="settings-button" onClick={openSettings}>
-            <SettingsIcon size={16} /> 设置
-          </button>
-        </div>
-      </aside>
 
-      <main className="history-panel">
-        <header className="topbar">
-          <div>
-            <h1>{view === "recent" ? "剪贴板" : "收藏"}</h1>
-            <p>{visibleItems.length} 条内容 · 本地保存</p>
+          <nav className="nav-list">
+            <button className={view === "recent" ? "active" : ""} onClick={() => setView("recent")}>
+              <span className="nav-icon"><Clipboard size={18} /></span>
+              <span className="nav-label">最近</span>
+              <span className="nav-count">{items.length}</span>
+            </button>
+            <button className={view === "favorites" ? "active" : ""} onClick={() => setView("favorites")}>
+              <span className="nav-icon"><Heart size={18} /></span>
+              <span className="nav-label">收藏</span>
+              <span className="nav-count">{favoriteCount}</span>
+            </button>
+          </nav>
+
+          <div className="sidebar-bottom">
+            <button className="settings-button" onClick={openSettings}>
+              <SettingsIcon size={17} /> 设置
+            </button>
+            <div className="sync-status">
+              <span className="sync-dot" />
+              <div>
+                <strong>本地保存</strong>
+                <span>剪贴板历史仅存储在此设备</span>
+              </div>
+            </div>
+            <div className="shortcut-hint">
+              <span>快速呼出</span>
+              <kbd>⌘ / Ctrl ⇧ V</kbd>
+            </div>
           </div>
-          <div className="topbar-actions">
-            {items.some((item) => !item.favorite) && (
-              <button className="icon-action" title="清除未收藏记录" onClick={clearNonFavorites}>
-                <Eraser size={16} />
-              </button>
-            )}
+        </aside>
+
+        <main className="history-panel glass-panel">
+          <header className="topbar">
             <div className="search-box">
-              <Search size={17} />
-              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索剪贴板…" />
+              <Search size={18} />
+              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索剪贴板内容" />
               {query && <button onClick={() => setQuery("")}><X size={15} /></button>}
             </div>
-          </div>
-        </header>
-
-        <section className="history-list">
-          {visibleItems.length === 0 ? (
-            <div className="empty-state">
-              <Clipboard size={28} />
-              <strong>还没有内容</strong>
-              <span>复制文字或图片后会自动出现在这里。</span>
-            </div>
-          ) : visibleItems.map((item) => (
-            <article
-              key={item.id}
-              className={`clip-card ${selected?.id === item.id ? "selected" : ""}`}
-              onClick={() => setSelectedId(item.id)}
-            >
-              <div className="clip-body">
-                {item.kind === "image" ? (
-                  <div className="image-preview-wrap">
-                    {item.imageDataUrl ? <img className="clip-image" src={item.imageDataUrl} alt="剪贴板图片" /> : <ImageIcon size={22} />}
-                  </div>
-                ) : (
-                  <p>{item.text}</p>
-                )}
-                <span>{item.kind === "image" ? "图片 · " : ""}{relativeTime(item.createdAt)}</span>
-              </div>
-              <div className="clip-actions">
-                <button title="复制" onClick={(event) => { event.stopPropagation(); void copyItem(item); }}>
-                  {copiedId === item.id ? <Check size={16} /> : <Copy size={16} />}
-                </button>
-                <button title="收藏" className={item.favorite ? "is-favorite" : ""} onClick={(event) => { event.stopPropagation(); void changeFavorite(item); }}>
-                  <Heart size={16} fill={item.favorite ? "currentColor" : "none"} />
-                </button>
-                <button title="删除" onClick={(event) => { event.stopPropagation(); void removeItem(item.id); }}>
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            </article>
-          ))}
-        </section>
-      </main>
-
-      <aside className="prompt-panel">
-        <div className="prompt-heading">
-          <div className="prompt-icon"><Sparkles size={18} /></div>
-          <div>
-            <h2>C.le. Actions</h2>
-            <p>剪贴板智能动作 + Prompt Lab</p>
-          </div>
-        </div>
-
-        {selected?.kind === "image" ? (
-          <div className="prompt-empty">
-            <ImageIcon size={25} />
-            <strong>当前选择的是图片</strong>
-            <span>图片历史已经支持；AI 图片动作会在后续版本加入。</span>
-          </div>
-        ) : selectedText ? (
-          <>
-            <label className="section-label">原始内容</label>
-            <div className="source-preview">{selectedText}</div>
-
-            <label className="section-label">智能动作</label>
-            <div className="mode-grid">
-              {quickActions.map((action) => (
-                <button key={action.id} disabled={optimizing} onClick={() => void runQuickAction(action)}>
-                  {action.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="engine-switch">
-              <button className={engine === "local" ? "active" : ""} onClick={() => setEngine("local")}>本地优化</button>
-              <button className={engine === "ai" ? "active" : ""} onClick={() => setEngine("ai")}>AI Provider</button>
-            </div>
-
-            <label className="section-label">Prompt 模式</label>
-            <div className="mode-grid">
-              {promptModes.map((option) => (
-                <button key={option.id} className={mode === option.id ? "active" : ""} onClick={() => setMode(option.id)}>
-                  {option.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="result-header">
-              <label className="section-label">C.le. 结果</label>
-              <button disabled={optimizing} onClick={() => void runOptimize()}>
-                {engine === "ai" ? "生成" : "重新生成"}
+            {items.some((item) => !item.favorite) && (
+              <button className="icon-action" title="清除未收藏记录" onClick={clearNonFavorites}>
+                <Eraser size={17} />
               </button>
-            </div>
-            {engine === "ai" && (
-              <div className="provider-status">
-                <ShieldCheck size={13} />
-                <span>{aiSettings.model} · {aiSettings.hasApiKey ? "API Key 已安全保存" : "未保存 API Key"}</span>
-              </div>
             )}
-            <div className="result-box-wrap">
-              {optimizing && <div className="result-loading"><LoaderCircle size={18} className="spin" /> C.le. 正在处理…</div>}
-              <textarea value={optimized} onChange={(event) => setOptimized(event.target.value)} spellCheck={false} placeholder={engine === "ai" ? "选择智能动作，或点击“生成”优化 Prompt" : ""} />
-            </div>
-            {optimizeError && <p className="inline-error">{optimizeError}</p>}
+          </header>
 
-            <button className="primary-action" disabled={!optimized || optimizing} onClick={() => void copyOptimized()}>
-              {copiedId === "optimized" ? <Check size={17} /> : <Sparkles size={17} />}
-              {copiedId === "optimized" ? "已复制" : "复制结果"}
+          <div className="history-toolbar">
+            <button onClick={() => selected && void copyItem(selected)} disabled={!selected}>
+              <Copy size={15} /> 复制当前
             </button>
-          </>
-        ) : (
-          <div className="prompt-empty">
-            <Sparkles size={25} />
-            <span>选择一条文字剪贴板内容开始处理。</span>
+            <button onClick={clearNonFavorites} disabled={!items.some((item) => !item.favorite)}>
+              <Eraser size={15} /> 清空历史
+            </button>
+            <button onClick={() => setView("favorites")}>
+              <Heart size={15} /> 查看收藏
+            </button>
+          </div>
+
+          <div className="history-section-heading">
+            <div>
+              <strong>{view === "recent" ? "今天" : "收藏内容"}</strong>
+              <span>{visibleItems.length} 条内容</span>
+            </div>
+            <span className="storage-pill">本地保存</span>
+          </div>
+
+          <section className="history-list">
+            {visibleItems.length === 0 ? (
+              <div className="empty-state">
+                <Clipboard size={30} />
+                <strong>还没有内容</strong>
+                <span>复制文字或图片后会自动出现在这里。</span>
+              </div>
+            ) : visibleItems.map((item) => (
+              <article
+                key={item.id}
+                className={`clip-card ${selected?.id === item.id ? "selected" : ""}`}
+                onClick={() => setSelectedId(item.id)}
+              >
+                <div className={`clip-type ${item.kind === "image" ? "image-type" : "text-type"}`}>
+                  {item.kind === "image" ? (
+                    item.imageDataUrl
+                      ? <img className="clip-image" src={item.imageDataUrl} alt="剪贴板图片" />
+                      : <ImageIcon size={22} />
+                  ) : (
+                    <span>T</span>
+                  )}
+                </div>
+
+                <div className="clip-body">
+                  {item.kind === "image" ? (
+                    <p className="image-caption">剪贴板图片</p>
+                  ) : (
+                    <p>{item.text}</p>
+                  )}
+                  <span>
+                    {relativeTime(item.createdAt)}
+                    <i>·</i>
+                    {item.kind === "image" ? "图片" : `文本 · ${item.text?.length ?? 0} 字`}
+                  </span>
+                </div>
+
+                <div className="clip-actions">
+                  <button title="复制" onClick={(event) => { event.stopPropagation(); void copyItem(item); }}>
+                    {copiedId === item.id ? <Check size={16} /> : <Copy size={16} />}
+                  </button>
+                  <button title="收藏" className={item.favorite ? "is-favorite" : ""} onClick={(event) => { event.stopPropagation(); void changeFavorite(item); }}>
+                    <Heart size={16} fill={item.favorite ? "currentColor" : "none"} />
+                  </button>
+                  <button title="删除" onClick={(event) => { event.stopPropagation(); void removeItem(item.id); }}>
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </article>
+            ))}
+          </section>
+
+          <footer className="history-footer">
+            <span>共 {visibleItems.length} 条内容</span>
+            <kbd>⌘ K</kbd>
+          </footer>
+        </main>
+
+        <aside className="prompt-panel glass-panel">
+          <div className="prompt-heading">
+            <div>
+              <h2><Sparkles size={18} /> C.le. Actions</h2>
+              <p>剪贴板智能动作与 Prompt 优化</p>
+            </div>
+          </div>
+
+          {selected?.kind === "image" ? (
+            <div className="prompt-empty">
+              <ImageIcon size={27} />
+              <strong>当前选择的是图片</strong>
+              <span>图片历史已经支持；AI 图片动作会在后续版本加入。</span>
+            </div>
+          ) : selectedText ? (
+            <>
+              <label className="section-label">选中的内容</label>
+              <div className="source-preview">
+                <p>{selectedText}</p>
+                <div className="source-meta">
+                  <span>{selectedText.length} 字</span>
+                  <button title="复制原始内容" onClick={() => void writeClipboardText(selectedText)}><Copy size={14} /></button>
+                </div>
+              </div>
+
+              <label className="section-label">智能操作</label>
+              <div className="action-grid">
+                {quickActions.map((action, index) => (
+                  <button
+                    key={action.id}
+                    className={index === 0 ? "featured" : ""}
+                    disabled={optimizing}
+                    onClick={() => void runQuickAction(action)}
+                  >
+                    {index === 0 && <Sparkles size={13} />}
+                    {action.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="engine-row">
+                <span className="section-label">处理引擎</span>
+                <div className="engine-switch">
+                  <button className={engine === "local" ? "active" : ""} onClick={() => setEngine("local")}>本地优化</button>
+                  <button className={engine === "ai" ? "active" : ""} onClick={() => setEngine("ai")}>AI Provider</button>
+                </div>
+              </div>
+
+              <label className="section-label">Prompt 模式</label>
+              <div className="mode-grid">
+                {promptModes.map((option) => (
+                  <button key={option.id} className={mode === option.id ? "active" : ""} onClick={() => setMode(option.id)}>
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="result-header">
+                <label className="section-label">操作结果</label>
+                <button disabled={optimizing} onClick={() => void runOptimize()}>
+                  {engine === "ai" ? "生成" : "重新生成"}
+                </button>
+              </div>
+
+              {engine === "ai" && (
+                <div className="provider-status">
+                  <ShieldCheck size={13} />
+                  <span>{aiSettings.model} · {aiSettings.hasApiKey ? "API Key 已安全保存" : "未保存 API Key"}</span>
+                </div>
+              )}
+
+              <div className="result-box-wrap">
+                {optimizing && <div className="result-loading"><LoaderCircle size={18} className="spin" /> C.le. 正在处理…</div>}
+                <textarea value={optimized} onChange={(event) => setOptimized(event.target.value)} spellCheck={false} placeholder={engine === "ai" ? "选择智能动作，或点击“生成”优化 Prompt" : ""} />
+                <span className="result-count">{optimized.length} 字</span>
+              </div>
+              {optimizeError && <p className="inline-error">{optimizeError}</p>}
+
+              <button className="primary-action" disabled={!optimized || optimizing} onClick={() => void copyOptimized()}>
+                {copiedId === "optimized" ? <Check size={17} /> : <Copy size={17} />}
+                {copiedId === "optimized" ? "已复制" : "复制结果"}
+              </button>
+            </>
+          ) : (
+            <div className="prompt-empty">
+              <Sparkles size={27} />
+              <span>选择一条文字剪贴板内容开始处理。</span>
+            </div>
+          )}
+        </aside>
+
+        {settingsOpen && (
+          <div className="modal-backdrop" onMouseDown={() => setSettingsOpen(false)}>
+            <section className="settings-modal" onMouseDown={(event) => event.stopPropagation()}>
+              <header>
+                <div>
+                  <h2>C.le. Clip 设置</h2>
+                  <p>桌面行为与 AI Provider</p>
+                </div>
+                <button className="modal-close" onClick={() => setSettingsOpen(false)}><X size={18} /></button>
+              </header>
+
+              <div className="settings-section">
+                <h3>系统</h3>
+                <label className="switch-row">
+                  <div>
+                    <strong>开机启动</strong>
+                    <span>登录 Windows 或 macOS 后自动启动 C.le. Clip</span>
+                  </div>
+                  <input type="checkbox" checked={autostart} onChange={(event) => void changeAutostart(event.target.checked)} />
+                </label>
+                <div className="settings-note">关闭主窗口或按 Esc 只会隐藏应用；可从系统托盘重新打开。</div>
+              </div>
+
+              <div className="settings-section">
+                <h3>AI Provider</h3>
+                <label className="field-label">OpenAI-compatible Endpoint</label>
+                <input className="settings-input" value={settingsForm.endpoint} onChange={(event) => setSettingsForm((current) => ({ ...current, endpoint: event.target.value }))} />
+                <label className="field-label">模型</label>
+                <input className="settings-input" value={settingsForm.model} onChange={(event) => setSettingsForm((current) => ({ ...current, model: event.target.value }))} placeholder="模型名称" />
+                <label className="field-label">API Key</label>
+                <input className="settings-input" type="password" value={settingsForm.apiKey} onChange={(event) => setSettingsForm((current) => ({ ...current, apiKey: event.target.value }))} placeholder={aiSettings.hasApiKey ? "已保存；留空保持不变" : "可留空用于本地兼容服务"} />
+                <div className="settings-note with-icon">
+                  <ShieldCheck size={14} />
+                  API Key 由系统凭据库保存，不写入剪贴板数据库。
+                </div>
+              </div>
+
+              <footer className="settings-footer">
+                <span className="settings-message">{settingsMessage}</span>
+                <button className="secondary-action" onClick={() => setSettingsOpen(false)}>取消</button>
+                <button className="save-action" disabled={settingsSaving} onClick={() => void saveSettings()}>
+                  {settingsSaving ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />}
+                  保存
+                </button>
+              </footer>
+            </section>
           </div>
         )}
-      </aside>
-
-      {settingsOpen && (
-        <div className="modal-backdrop" onMouseDown={() => setSettingsOpen(false)}>
-          <section className="settings-modal" onMouseDown={(event) => event.stopPropagation()}>
-            <header>
-              <div>
-                <h2>C.le. Clip 设置</h2>
-                <p>桌面行为与 AI Provider</p>
-              </div>
-              <button className="modal-close" onClick={() => setSettingsOpen(false)}><X size={18} /></button>
-            </header>
-
-            <div className="settings-section">
-              <h3>系统</h3>
-              <label className="switch-row">
-                <div>
-                  <strong>开机启动</strong>
-                  <span>登录 Windows 或 macOS 后自动启动 C.le. Clip</span>
-                </div>
-                <input type="checkbox" checked={autostart} onChange={(event) => void changeAutostart(event.target.checked)} />
-              </label>
-              <div className="settings-note">关闭主窗口或按 Esc 只会隐藏应用；可从系统托盘重新打开。</div>
-            </div>
-
-            <div className="settings-section">
-              <h3>AI Provider</h3>
-              <label className="field-label">OpenAI-compatible Endpoint</label>
-              <input className="settings-input" value={settingsForm.endpoint} onChange={(event) => setSettingsForm((current) => ({ ...current, endpoint: event.target.value }))} />
-              <label className="field-label">模型</label>
-              <input className="settings-input" value={settingsForm.model} onChange={(event) => setSettingsForm((current) => ({ ...current, model: event.target.value }))} placeholder="模型名称" />
-              <label className="field-label">API Key</label>
-              <input className="settings-input" type="password" value={settingsForm.apiKey} onChange={(event) => setSettingsForm((current) => ({ ...current, apiKey: event.target.value }))} placeholder={aiSettings.hasApiKey ? "已保存；留空保持不变" : "可留空用于本地兼容服务"} />
-              <div className="settings-note with-icon">
-                <ShieldCheck size={14} />
-                API Key 由系统凭据库保存，不写入剪贴板数据库。
-              </div>
-            </div>
-
-            <footer className="settings-footer">
-              <span className="settings-message">{settingsMessage}</span>
-              <button className="secondary-action" onClick={() => setSettingsOpen(false)}>取消</button>
-              <button className="save-action" disabled={settingsSaving} onClick={() => void saveSettings()}>
-                {settingsSaving ? <LoaderCircle size={15} className="spin" /> : <Check size={15} />}
-                保存
-              </button>
-            </footer>
-          </section>
-        </div>
-      )}
+      </div>
     </div>
   );
 }
