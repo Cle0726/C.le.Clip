@@ -30,10 +30,7 @@ pub(crate) fn list_clipboard_items(
     db::list_items(&state.db_path, limit.unwrap_or(HISTORY_LIMIT).clamp(1, HISTORY_LIMIT))
 }
 
-#[tauri::command]
-pub(crate) fn capture_clipboard(
-    state: State<'_, AppState>,
-) -> Result<Option<ClipboardItem>, String> {
+pub(crate) fn capture_clipboard_once(state: &AppState) -> Result<Option<ClipboardItem>, String> {
     let mut clipboard = Clipboard::new().map_err(|error| error.to_string())?;
 
     if let Ok(image) = clipboard.get_image() {
@@ -65,6 +62,13 @@ pub(crate) fn capture_clipboard(
         Ok(_) | Err(arboard::Error::ContentNotAvailable) => Ok(None),
         Err(error) => Err(error.to_string()),
     }
+}
+
+#[tauri::command]
+pub(crate) fn capture_clipboard(
+    state: State<'_, AppState>,
+) -> Result<Option<ClipboardItem>, String> {
+    capture_clipboard_once(state.inner())
 }
 
 #[tauri::command]
