@@ -63,5 +63,5 @@ export async function deleteClipboardItem(id: string): Promise<void> {
 
 export async function clearClipboardHistory(keepFavorites = true): Promise<void> {
   if (!isTauriRuntime()) return;
-  await invoke("clear_clipboard_history", { keep_favorites: keepFavorites });
+  await invoke("clear_clipboard_history", { keepFavorites });
 }
