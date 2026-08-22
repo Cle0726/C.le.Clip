@@ -2,6 +2,7 @@ mod ai;
 mod clipboard;
 mod db;
 mod system;
+mod watcher;
 
 use tauri::{Manager, WindowEvent};
 
@@ -16,7 +17,10 @@ pub fn run() {
             app.manage(db::AppState::new(db_path));
 
             #[cfg(desktop)]
-            system::setup_desktop(app)?;
+            {
+                watcher::init(app.handle()).map_err(std::io::Error::other)?;
+                system::setup_desktop(app)?;
+            }
 
             Ok(())
         })
@@ -42,6 +46,7 @@ pub fn run() {
             ai::get_ai_settings,
             ai::save_ai_settings,
             ai::optimize_prompt_ai,
+            ai::run_ai_action,
         ])
         .run(tauri::generate_context!())
         .expect("error while running C.le. Clip");
