@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { AiSettings, PromptMode } from "../types";
+import type { AiActionKind, AiSettings, PromptMode } from "../types";
 import { isTauriRuntime } from "./clipboard";
 
 export const DEFAULT_AI_SETTINGS: AiSettings = {
@@ -44,4 +44,14 @@ export async function optimizePromptWithAi(
     throw new Error("AI Provider 仅在桌面应用中可用");
   }
   return invoke<string>("optimize_prompt_ai", { input, mode });
+}
+
+export async function runAiAction(
+  input: string,
+  action: AiActionKind,
+): Promise<string> {
+  if (!isTauriRuntime()) {
+    throw new Error("AI Actions 仅在桌面应用中可用");
+  }
+  return invoke<string>("run_ai_action", { input, action });
 }
