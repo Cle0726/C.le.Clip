@@ -1,15 +1,16 @@
 {
   "name": "c-le-clip",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "icons": "tauri icon src-tauri/icons/icon-source.svg",
     "tauri": "tauri",
-    "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:dev": "npm run icons && tauri dev",
+    "tauri:build": "npm run icons && tauri build"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
