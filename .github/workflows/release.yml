@@ -30,7 +30,7 @@ jobs:
             artifact_name: C.le.Clip-macOS-Apple-Silicon
             artifact_path: src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
           - name: macOS Intel
-            platform: macos-14
+            platform: macos-15-intel
             target: x86_64-apple-darwin
             artifact_name: C.le.Clip-macOS-Intel
             artifact_path: src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
@@ -123,7 +123,7 @@ jobs:
 
           Cross-platform clipboard manager with C.le. Actions and Prompt optimization.
 
-          This release includes the blue-gray glass C.le. Clip application icon and a more reliable download pipeline.
+          This release includes the blue-gray glass C.le. Clip application icon and architecture-matched macOS builds.
 
           Downloads:
           - Windows x64: `.exe` and `.msi`
