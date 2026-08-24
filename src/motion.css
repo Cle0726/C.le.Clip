@@ -1,0 +1,339 @@
+/* C.le. Clip motion pass
+ * Fast, quiet desktop motion: 140–220ms for interaction feedback.
+ */
+
+:root {
+  --motion-fast: 140ms;
+  --motion-base: 180ms;
+  --motion-slow: 220ms;
+  --motion-ease: cubic-bezier(.2, .8, .2, 1);
+  --motion-spring: cubic-bezier(.18, .9, .28, 1.12);
+}
+
+.reference-window {
+  transform-origin: 50% 46%;
+  animation: cle-window-in var(--motion-slow) var(--motion-ease) both;
+}
+
+.window-header,
+.reference-content,
+.reference-footer {
+  animation: cle-content-in var(--motion-slow) var(--motion-ease) both;
+}
+
+.reference-content { animation-delay: 35ms; }
+.reference-footer { animation-delay: 55ms; }
+
+.window-controls button,
+.reference-filters button,
+.clip-card-actions button,
+.selected-meta button,
+.reference-action,
+.regenerate,
+.result-footer button,
+.reference-footer > button,
+.reference-settings button,
+.reference-settings input,
+.list-more {
+  transition:
+    transform var(--motion-fast) var(--motion-ease),
+    opacity var(--motion-fast) var(--motion-ease),
+    background-color var(--motion-base) var(--motion-ease),
+    border-color var(--motion-base) var(--motion-ease),
+    box-shadow var(--motion-base) var(--motion-ease),
+    color var(--motion-base) var(--motion-ease);
+}
+
+.window-controls button:active,
+.reference-filters button:active,
+.clip-card-actions button:active,
+.selected-meta button:active,
+.reference-action:active:not(:disabled),
+.regenerate:active:not(:disabled),
+.result-footer button:active:not(:disabled),
+.reference-footer > button:active,
+.reference-settings button:active:not(:disabled),
+.list-more:active {
+  transform: scale(.965);
+  transition-duration: 70ms;
+}
+
+.reference-search {
+  transition:
+    transform var(--motion-base) var(--motion-ease),
+    border-color var(--motion-base) var(--motion-ease),
+    background-color var(--motion-base) var(--motion-ease),
+    box-shadow var(--motion-base) var(--motion-ease);
+}
+
+.reference-search:focus-within {
+  transform: translateY(-1px);
+}
+
+.reference-clip {
+  isolation: isolate;
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+
+.reference-clip::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 18%, rgba(255,255,255,.085) 48%, transparent 76%);
+  transform: translateX(-125%);
+  transition: transform 420ms var(--motion-ease);
+}
+
+.reference-clip:hover::after {
+  transform: translateX(125%);
+}
+
+.reference-clip:hover {
+  transform: translateY(-1px);
+}
+
+.reference-clip.selected {
+  animation: cle-select-in var(--motion-base) var(--motion-spring) both;
+}
+
+.reference-clip.motion-new {
+  animation: cle-clip-new var(--motion-slow) var(--motion-ease) both;
+}
+
+.selection-dot {
+  animation: cle-dot-in var(--motion-base) var(--motion-spring) both, cle-dot-glow 2.6s ease-in-out 420ms infinite;
+}
+
+.favorite-star {
+  transform-origin: 50% 55%;
+  animation: cle-star-pop var(--motion-base) var(--motion-spring) both;
+}
+
+.clip-menu {
+  transform-origin: top right;
+  animation: cle-menu-in var(--motion-fast) var(--motion-spring) both;
+}
+
+.clip-menu button {
+  transition: transform var(--motion-fast) var(--motion-ease), background-color var(--motion-fast) var(--motion-ease), color var(--motion-fast) var(--motion-ease);
+}
+
+.clip-menu button:hover {
+  transform: translateX(2px);
+}
+
+.reference-action {
+  position: relative;
+  overflow: hidden;
+}
+
+.reference-action::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 20%, rgba(255,255,255,.07) 48%, transparent 74%);
+  transform: translateX(-120%);
+  transition: transform 360ms var(--motion-ease);
+}
+
+.reference-action:hover:not(:disabled)::after {
+  transform: translateX(120%);
+}
+
+.reference-action:hover:not(:disabled) .action-symbol {
+  transform: scale(1.045);
+}
+
+.action-symbol {
+  transition: transform var(--motion-base) var(--motion-spring), filter var(--motion-base) var(--motion-ease);
+}
+
+.reference-action:hover:not(:disabled) .return-arrow,
+.reference-action:hover:not(:disabled) kbd {
+  transform: translateX(2px);
+}
+
+.return-arrow,
+.reference-action kbd {
+  transition: transform var(--motion-base) var(--motion-ease), background-color var(--motion-base) var(--motion-ease), border-color var(--motion-base) var(--motion-ease);
+}
+
+.prompt-drawer {
+  transform-origin: 50% 0;
+  animation: cle-drawer-in var(--motion-base) var(--motion-ease) both;
+}
+
+.engine-switch button.active,
+.mode-row button.active {
+  animation: cle-segment-in var(--motion-fast) var(--motion-spring) both;
+}
+
+.result-editor {
+  transition: border-color var(--motion-base) var(--motion-ease), box-shadow var(--motion-base) var(--motion-ease), background-color var(--motion-base) var(--motion-ease);
+}
+
+.result-editor:focus-within {
+  box-shadow: 0 0 0 3px rgba(112, 139, 255, .08), inset 0 1px 0 rgba(255,255,255,.04);
+}
+
+.result-loading {
+  animation: cle-fade-in var(--motion-fast) var(--motion-ease) both;
+}
+
+.selected-meta button svg,
+.result-footer button svg,
+.clip-card-actions button svg,
+.window-controls button svg {
+  transform-origin: 50% 50%;
+  transition: transform var(--motion-fast) var(--motion-spring);
+}
+
+.selected-meta button:hover svg,
+.result-footer button:hover:not(:disabled) svg,
+.clip-card-actions button:hover svg,
+.window-controls button:hover svg {
+  transform: scale(1.08);
+}
+
+.motion-detail-swap .selected-meta,
+.motion-detail-swap .selected-preview,
+.motion-detail-swap .reference-actions,
+.motion-detail-swap .image-action-stack,
+.motion-detail-swap .prompt-drawer {
+  animation: cle-detail-swap var(--motion-base) var(--motion-ease) both;
+}
+
+.motion-detail-swap .selected-preview { animation-delay: 18ms; }
+.motion-detail-swap .reference-actions,
+.motion-detail-swap .image-action-stack,
+.motion-detail-swap .prompt-drawer { animation-delay: 34ms; }
+
+.settings-backdrop {
+  animation: cle-backdrop-in var(--motion-fast) ease-out both;
+}
+
+.reference-settings {
+  transform-origin: 50% 46%;
+  animation: cle-settings-in var(--motion-slow) var(--motion-spring) both;
+}
+
+.reference-settings .settings-card {
+  animation: cle-settings-card-in var(--motion-base) var(--motion-ease) both;
+}
+
+.reference-settings .settings-card:nth-of-type(1) { animation-delay: 35ms; }
+.reference-settings .settings-card:nth-of-type(2) { animation-delay: 55ms; }
+
+.settings-switch-row input {
+  transition: transform var(--motion-fast) var(--motion-spring), filter var(--motion-fast) var(--motion-ease);
+}
+
+.settings-switch-row input:active {
+  transform: scale(.94);
+}
+
+.list-more:hover {
+  transform: translateY(2px);
+}
+
+@keyframes cle-window-in {
+  from { opacity: 0; transform: translateY(7px) scale(.985); filter: saturate(.88); }
+  to { opacity: 1; transform: translateY(0) scale(1); filter: saturate(1); }
+}
+
+@keyframes cle-content-in {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes cle-select-in {
+  0% { transform: scale(.992); }
+  58% { transform: scale(1.006); }
+  100% { transform: scale(1); }
+}
+
+@keyframes cle-clip-new {
+  from { opacity: 0; transform: translateY(-7px) scale(.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes cle-dot-in {
+  from { opacity: 0; transform: translateY(-50%) scale(.35); }
+  to { opacity: 1; transform: translateY(-50%) scale(1); }
+}
+
+@keyframes cle-dot-glow {
+  0%, 100% { box-shadow: 0 0 8px rgba(70, 91, 255, .48); }
+  50% { box-shadow: 0 0 14px rgba(70, 91, 255, .72); }
+}
+
+@keyframes cle-star-pop {
+  0% { opacity: 0; transform: scale(.45) rotate(-16deg); }
+  70% { opacity: 1; transform: scale(1.14) rotate(4deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+
+@keyframes cle-menu-in {
+  from { opacity: 0; transform: translateY(-4px) scale(.965); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes cle-drawer-in {
+  from { opacity: 0; transform: translateY(-6px) scaleY(.975); }
+  to { opacity: 1; transform: translateY(0) scaleY(1); }
+}
+
+@keyframes cle-segment-in {
+  from { transform: scale(.96); }
+  to { transform: scale(1); }
+}
+
+@keyframes cle-detail-swap {
+  from { opacity: .28; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes cle-backdrop-in {
+  from { opacity: 0; backdrop-filter: blur(0); -webkit-backdrop-filter: blur(0); }
+  to { opacity: 1; }
+}
+
+@keyframes cle-settings-in {
+  from { opacity: 0; transform: translateY(8px) scale(.975); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes cle-settings-card-in {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes cle-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 1ms !important;
+  }
+
+  .reference-clip:hover,
+  .reference-search:focus-within,
+  .reference-action:hover:not(:disabled),
+  .list-more:hover {
+    transform: none !important;
+  }
+}
