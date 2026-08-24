@@ -4,3 +4,4 @@
 - Use `macos-15-intel` for Intel x86_64 builds.
 - Keep Windows on `windows-latest`.
 - Publish only after `.exe`, `.msi`, and both `.dmg` artifacts are verified.
+- Release retry triggered on 2026-08-24 after the previous publish did not create `app-v0.1.3`.
