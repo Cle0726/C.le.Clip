@@ -1,6 +1,6 @@
 [package]
 name = "c-le-clip"
-version = "0.1.3"
+version = "0.1.4"
 description = "C.le. Clip - clipboard history and prompt optimizer"
 authors = ["C.le."]
 edition = "2021"
